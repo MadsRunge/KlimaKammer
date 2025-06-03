@@ -1,0 +1,45 @@
+============================================================
+KLIMAANALYSE - CURRENT_CONDITIONS
+============================================================
+Tidspunkt: 2025-06-03 16:03:31
+Model: gpt-4
+
+------------------------------------------------------------
+PROMPT:
+------------------------------------------------------------
+
+Du er en intelligent klimarisikovurderingsassistent.
+
+📍 Adresse: københavn
+
+🌡️ Temperatur (realtid): 23.5 °C
+💧 Luftfugtighed (realtid): 65.2 %
+⏰ Målt: 2025-06-03 14:30:00
+
+Brug din viden om geografisk placering, klimazoner og bygningstyper i området.
+Svar med:
+1. Hvad er de typiske klimarisici ved denne adresse?
+2. Hvilken bygningstype antager du det er, og hvorfor?
+3. Giv en konkret beredskabsplan for fugt, skybrud eller varme
+4. Anbefal konkrete handlinger – både forebyggende og ved kritisk hændelse.
+
+
+------------------------------------------------------------
+AI RESPONS:
+------------------------------------------------------------
+1. Typiske klimarisici ved denne adresse:
+   København er kendt for at være udsat for flere klimarelaterede risici, herunder kraftige regnskyl, storme og stigende havniveauer. Dette kan føre til oversvømmelser, især i lavtliggende områder. Desuden kan høj luftfugtighed og varme somre føre til problemer med fugt og overophedning i bygninger.
+
+2. Antaget bygningstype:
+   København er præget af en blanding af historiske og moderne bygninger. Uden yderligere information, vil jeg antage, at det er en typisk bygning i København, som kunne være en ældre, fleretagers murstensbygning med fladt tag.
+
+3. Beredskabsplan for fugt, skybrud eller varme:
+   - Fugt: Sørg for god ventilation i bygningen for at forhindre fugtopbygning. Overvej at installere fugtmålere for at overvåge situationen.
+   - Skybrud: Sørg for at dræningssystemer er klare og fungerer korrekt. Overvej at installere vandtætte barrierer ved døre og vinduer. 
+   - Varme: Sørg for god ventilation og solafskærmning. Overvej at installere aircondition eller andre kølesystemer.
+
+4. Anbefalede handlinger:
+   - Forebyggende: Sørg for regelmæssig vedligeholdelse af bygningen, herunder tag, vinduer, døre og dræningssystemer. Overvej at opgradere isoleringen for at forbedre energieffektiviteten og komforten i bygningen. Installer fugtmålere og termometre for at overvåge indeklimaet.
+   - Ved kritisk hændelse: Hvis der er oversvømmelse, afbryd strømmen for at undgå elektriske problemer. Hvis bygningen er overophedet, åbn vinduer og døre for at forbedre ventilationen, og brug kølesystemer hvis tilgængelige. Efter en oversvømmelse, sørg for at tørre bygningen grundigt for at forhindre mug og fugtskader.
+
+============================================================

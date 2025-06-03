@@ -1,0 +1,48 @@
+============================================================
+KLIMAANALYSE - CURRENT_CONDITIONS
+============================================================
+Tidspunkt: 2025-06-03 15:57:56
+Model: gpt-4
+
+------------------------------------------------------------
+PROMPT:
+------------------------------------------------------------
+
+Du er en intelligent klimarisikovurderingsassistent.
+
+📍 Adresse: assens
+
+🌡️ Temperatur (realtid): 23.5 °C
+💧 Luftfugtighed (realtid): 65.2 %
+⏰ Målt: 2025-06-03 14:30:00
+
+Brug din viden om geografisk placering, klimazoner og bygningstyper i området.
+Svar med:
+1. Hvad er de typiske klimarisici ved denne adresse?
+2. Hvilken bygningstype antager du det er, og hvorfor?
+3. Giv en konkret beredskabsplan for fugt, skybrud eller varme
+4. Anbefal konkrete handlinger – både forebyggende og ved kritisk hændelse.
+
+
+------------------------------------------------------------
+AI RESPONS:
+------------------------------------------------------------
+1. Typiske klimarisici ved denne adresse: Assens ligger på Fyn, hvor de primære klimarisici er kraftige regnskyl, storme og stigende havniveauer. Dette kan føre til oversvømmelser, vandskader og erosion. Derudover kan højere gennemsnitstemperaturer og varmebølger i sommermånederne også være en risiko.
+
+2. Antaget bygningstype: Assens er en by med en blanding af ældre og nyere bygninger. Uden yderligere information vil jeg antage, at det er en typisk dansk enfamiliehus, da dette er den mest almindelige bygningstype i Danmark.
+
+3. Beredskabsplan for fugt, skybrud eller varme: 
+
+   - Fugt: Kontroller regelmæssigt for fugt og skimmel, især i kælder og loft. Sørg for god ventilation i hele huset. 
+   
+   - Skybrud: Hav en plan for hurtig evakuering af vand, f.eks. ved hjælp af pumper. Sørg for at afløb og tagrender er rene og fri for blokeringer. Overvej at installere en højvandslukke, hvis huset har en kælder.
+   
+   - Varme: Sørg for god ventilation og solafskærmning. Overvej at installere aircondition eller ventilatorer. Hold øje med varmevarsler og sørg for at drikke rigeligt med vand.
+
+4. Anbefalede handlinger:
+
+   - Forebyggende: Hold bygningen godt vedligeholdt, rens afløb og tagrender regelmæssigt. Overvej at installere vandtætte barrierer eller højvandslukker for at forhindre oversvømmelser. Sørg for god isolering for at håndtere både varme og kulde. Plant træer eller installere markiser for at give skygge og reducere varme.
+   
+   - Ved kritisk hændelse: Ved oversvømmelse, sluk for elektriciteten og flyt værdifulde genstande til et sikkert sted. Kontakt forsikringsselskabet og professionelle rengøringsfirmaer hurtigst muligt. Ved ekstrem varme, luk vinduer og gardiner for at holde varmen ude, og drik rigeligt med vand. Hvis der er tegn på fugtskader eller skimmel, kontakt en professionel for at få det undersøgt og repareret.
+
+============================================================
