@@ -1,19 +1,31 @@
 #!/usr/bin/env python3
 """
-Climate Analyzer - Reads sensor data files and provides AI-powered climate analysis.
+Climate Analyzer - Reads sensor data files and provides AI-powered climate analysis,
+enhanced with BBR building data.
 """
 
 import os
-import json
-import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
+from typing import Optional
 from dataclasses import dataclass
+
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# Load environment variables
+# Importer BBR service og dataclass
+# Antager at bbr_service.py er i samme mappe eller tilgængelig i PYTHONPATH
+try:
+    from bbr_service import BBRAddressService, BuildingData
+except ImportError:
+    print("🔴 FEJL: Kunne ikke importere BBRAddressService eller BuildingData.")
+    print("   Sørg for, at 'bbr_service.py' er i samme mappe eller korrekt installeret.")
+    # Du kan vælge at lade programmet afslutte her, eller fortsætte uden BBR funktionalitet.
+    # For nu sætter vi dem til None, så programmet kan starte, men BBR-delen vil fejle.
+    BBRAddressService = None
+    BuildingData = None
+
+# Load environment variables (for OpenAI API Key etc.)
 load_dotenv()
 
 
@@ -27,31 +39,37 @@ class ClimateReading:
 
 
 class DataReader:
-    """Handles reading sensor data from files."""
+    """Handles reading current sensor data from files."""
     
     def __init__(self, data_dir: str = "sensordata"):
         self.data_dir = Path(data_dir)
         
         if not self.data_dir.exists():
-            raise FileNotFoundError(f"Data directory not found: {data_dir}")
+            try:
+                self.data_dir.mkdir(parents=True, exist_ok=True)
+                print(f"INFO: Datamappen '{data_dir}' fandtes ikke og blev oprettet.")
+                current_file_path = self.data_dir / "current_reading.txt"
+                if not current_file_path.exists():
+                    print(f"ADVARSEL: '{current_file_path}' ikke fundet. Opret testdata ifølge README, hvis der ikke bruges live sensor.")
+
+            except Exception as e:
+                raise FileNotFoundError(f"Datamappen blev ikke fundet og kunne ikke oprettes: {data_dir}. Fejl: {e}")
     
     def get_current_reading(self) -> Optional[ClimateReading]:
         """
         Read the most recent sensor reading.
-        
-        Returns:
-            Latest ClimateReading or None if not available
         """
         current_file = self.data_dir / "current_reading.txt"
         
         if not current_file.exists():
+            print(f"❌ Fil med nuværende måling ikke fundet: {current_file}")
+            print("💡 Sørg for, at 'sensor_logger.py' kører, eller opret testdata.")
             return None
         
         try:
             with open(current_file, 'r') as f:
                 lines = f.readlines()
             
-            # Parse the structured format
             data = {}
             for line in lines:
                 if ':' in line:
@@ -64,114 +82,9 @@ class DataReader:
                 humidity=float(data.get('Humidity', '0').replace('%', '')),
                 unix_timestamp=float(data.get('Unix Timestamp', '0'))
             )
-            
         except Exception as e:
-            print(f"❌ Error reading current data: {e}")
+            print(f"❌ Fejl ved læsning af nuværende data fra '{current_file}': {e}")
             return None
-    
-    def get_latest_readings(self, count: int = 10) -> List[ClimateReading]:
-        """
-        Get the latest N readings.
-        
-        Args:
-            count: Number of recent readings to return
-            
-        Returns:
-            List of ClimateReading objects
-        """
-        latest_file = self.data_dir / "latest_readings.txt"
-        
-        if not latest_file.exists():
-            return []
-        
-        readings = []
-        try:
-            with open(latest_file, 'r') as f:
-                lines = f.readlines()
-            
-            # Skip comment lines and get latest readings
-            data_lines = [line.strip() for line in lines if not line.startswith('#') and line.strip()]
-            
-            for line in data_lines[-count:]:
-                parts = line.split(',')
-                if len(parts) >= 3:
-                    readings.append(ClimateReading(
-                        timestamp=parts[0],
-                        temperature=float(parts[1]),
-                        humidity=float(parts[2]),
-                        unix_timestamp=0  # Not stored in this format
-                    ))
-            
-        except Exception as e:
-            print(f"❌ Error reading latest readings: {e}")
-        
-        return readings
-    
-    def get_daily_data(self, date: str = None) -> List[ClimateReading]:
-        """
-        Get all readings for a specific day.
-        
-        Args:
-            date: Date in YYYY-MM-DD format, defaults to today
-            
-        Returns:
-            List of ClimateReading objects for the day
-        """
-        if date is None:
-            date = datetime.now().strftime("%Y-%m-%d")
-        
-        daily_file = self.data_dir / "daily" / f"{date}.csv"
-        
-        if not daily_file.exists():
-            return []
-        
-        readings = []
-        try:
-            with open(daily_file, 'r') as f:
-                lines = f.readlines()[1:]  # Skip header
-            
-            for line in lines:
-                parts = line.strip().split(',')
-                if len(parts) >= 4:
-                    readings.append(ClimateReading(
-                        timestamp=parts[0],
-                        temperature=float(parts[1]),
-                        humidity=float(parts[2]),
-                        unix_timestamp=float(parts[3])
-                    ))
-                    
-        except Exception as e:
-            print(f"❌ Error reading daily data: {e}")
-        
-        return readings
-    
-    def get_statistics(self, readings: List[ClimateReading]) -> Dict:
-        """Calculate statistics for a list of readings."""
-        if not readings:
-            return {}
-        
-        temps = [r.temperature for r in readings]
-        humidities = [r.humidity for r in readings]
-        
-        return {
-            "count": len(readings),
-            "temperature": {
-                "min": min(temps),
-                "max": max(temps),
-                "avg": sum(temps) / len(temps),
-                "current": temps[-1] if temps else 0
-            },
-            "humidity": {
-                "min": min(humidities),
-                "max": max(humidities),
-                "avg": sum(humidities) / len(humidities),
-                "current": humidities[-1] if humidities else 0
-            },
-            "time_range": {
-                "first": readings[0].timestamp,
-                "last": readings[-1].timestamp
-            }
-        }
 
 
 class ClimateAnalyzer:
@@ -180,103 +93,110 @@ class ClimateAnalyzer:
     def __init__(self, data_dir: str = "sensordata"):
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable not set")
+            raise ValueError("OPENAI_API_KEY environment variable not set.")
         
         self.client = OpenAI(api_key=api_key)
         self.model = "gpt-4"
         self.data_dir = Path(data_dir)
-        
-        # Setup analysis storage
         self.analysis_dir = self.data_dir / "analyses"
         self.analysis_dir.mkdir(exist_ok=True)
     
-    def analyze_current_conditions(self, current_reading: ClimateReading, address: str = "") -> str:
+    def analyze_current_conditions(self, 
+                                   current_reading: ClimateReading, 
+                                   bbr_data: Optional[BuildingData], 
+                                   address: str) -> str:
         """
-        Analyze current climate conditions using your original prompt.
-        
-        Args:
-            current_reading: Current sensor reading
-            address: Optional address for location-specific advice
-            
-        Returns:
-            AI analysis and recommendations
+        Analyze current climate conditions using sensor data and BBR data.
         """
-        prompt = self._create_current_analysis_prompt(current_reading, address)
-        
-        return self._get_ai_response(prompt, "current_conditions")
+        prompt = self._create_current_analysis_prompt(current_reading, bbr_data, address)
+        return self._get_ai_response(prompt, "current_conditions_bbr")
     
-    def analyze_trends(self, readings: List[ClimateReading], stats: Dict, address: str = "") -> str:
-        """
-        Analyze climate trends over time.
+    def _format_bbr_data_for_prompt(self, bbr_data: Optional[BuildingData]) -> str:
+        """Formats BuildingData into a string for the AI prompt."""
+        if not bbr_data:
+            return "Ingen BBR data tilgængelig for denne adresse.\n"
+
+        info_parts = []
         
-        Args:
-            readings: List of recent readings
-            stats: Statistical summary of the data
-            address: Optional address for location-specific advice
+        def add_info(label, value, unit=""):
+            if value not in [None, "", []]:
+                info_parts.append(f"{label}: {value}{unit}")
+
+        add_info("Bygningstype", bbr_data.building_type)
+        add_info("Opførelsesår", bbr_data.building_year)
+        if bbr_data.renovation_year and bbr_data.renovation_year != bbr_data.building_year:
+            add_info("Renoveret år", bbr_data.renovation_year)
+        
+        add_info("Ydervægsmateriale", bbr_data.exterior_material)
+        add_info("Tagdækningsmateriale", bbr_data.roof_material)
+        
+        add_info("Samlet bygningsareal", bbr_data.total_building_area, " m²")
+        add_info("Samlet boligareal", bbr_data.total_residential_area, " m²")
+        add_info("Samlet erhvervsareal", bbr_data.total_commercial_area, " m²")
+        add_info("Bebygget areal", bbr_data.built_area, " m²")
+        
+        add_info("Antal etager", bbr_data.floors)
+        if bbr_data.deviating_floors:
+             # BBR's 'byg055AfvigendeEtager' kode for kælder er ofte "10"
+             # Din _translate_floor_type i bbr_service kan forbedres til at inkludere dette for klartekst
+            kælder_info = "Ja" if "10" in str(bbr_data.deviating_floors) else f"Kode: {bbr_data.deviating_floors}"
+            add_info("Afvigende etager (f.eks. kælder)", kælder_info)
+
+
+        # Detaljeret kælder- og loftsareal fra floor_details
+        if bbr_data.floor_details:
+            has_basement_floor = False
+            has_attic_floor = False
+            for floor in bbr_data.floor_details:
+                if floor.get('type_code') == '2': # Kælder
+                    has_basement_floor = True
+                    add_info(f"Kælder ({floor.get('designation', 'kl')}) areal", floor.get('total_area') or floor.get('basement_area'), " m²")
+                elif floor.get('type_code') == '1': # Tagetage
+                    has_attic_floor = True
+                    add_info(f"Tagetage ({floor.get('designation', 'tag')}) areal", floor.get('total_area') or floor.get('attic_area'), " m²")
             
-        Returns:
-            AI trend analysis and recommendations
-        """
-        prompt = self._create_trend_analysis_prompt(readings, stats, address)
+            if not bbr_data.basement_area and not has_basement_floor: # Hvis ikke allerede tilføjet
+                 add_info("Kælderareal (direkte felt)", bbr_data.basement_area, " m²")
+            if not bbr_data.attic_area and not has_attic_floor: # Hvis ikke allerede tilføjet
+                 add_info("Loftsareal (direkte felt)", bbr_data.attic_area, " m²")
+
+
+        add_info("Varmeinstallation", bbr_data.heating_type)
+        add_info("Elevator", "Ja" if bbr_data.has_elevator else "Nej")
+        add_info("Koordinater (reference)", bbr_data.coordinate)
         
-        return self._get_ai_response(prompt, "trend_analysis")
-    
-    def _create_current_analysis_prompt(self, reading: ClimateReading, address: str) -> str:
-        """Create prompt for current conditions analysis (your original prompt)."""
-        address_line = f"📍 Adresse: {address}\n\n" if address else ""
+        if not info_parts:
+            return "BBR data fundet, men relevante felter er tomme.\n"
+            
+        return "\n".join(info_parts) + "\n"
+
+    def _create_current_analysis_prompt(self, 
+                                        reading: ClimateReading, 
+                                        bbr_data: Optional[BuildingData], 
+                                        address: str) -> str:
+        """Create prompt for current conditions analysis, including BBR data."""
         
-        return f"""
+        bbr_info_string = self._format_bbr_data_for_prompt(bbr_data)
+
+        prompt = f"""
 Du er en intelligent klimarisikovurderingsassistent.
 
-{address_line}🌡️ Temperatur (realtid): {reading.temperature:.1f} °C
+ADRESSE: {address}
+
+NUVÆRENDE SENSORMÅLINGER:
+🌡️ Temperatur (realtid): {reading.temperature:.1f} °C
 💧 Luftfugtighed (realtid): {reading.humidity:.1f} %
 ⏰ Målt: {reading.timestamp}
 
-Brug din viden om geografisk placering, klimazoner og bygningstyper i området.
-Svar med:
-1. Hvad er de typiske klimarisici ved denne adresse?
-2. Hvilken bygningstype antager du det er, og hvorfor?
-3. Giv en konkret beredskabsplan for fugt, skybrud eller varme
-4. Anbefal konkrete handlinger – både forebyggende og ved kritisk hændelse.
+BYGNINGSINFORMATION FRA BBR:
+{bbr_info_string}
+Baseret på BÅDE ovenstående SENSORMÅLINGER OG de detaljerede BYGNINGSOPLYSNINGER FRA BBR (hvis tilgængelige):
+1. Hvad er de typiske klimarisici for DENNE SPECIFIKKE BYGNING (med dens type, materialer, alder, og konstruktion som beskrevet i BBR) på adressen?
+2. Vurder bygningens sårbarhed over for fugt, skybrud og varme baseret på dens BBR-karakteristika (f.eks. kælder, tagmateriale, opførelsesår).
+3. Giv en KONKRET beredskabsplan TILPASSET DENNE SPECIFIKKE BYGNING.
+4. Anbefal konkrete handlinger – både forebyggende og ved kritisk hændelse – der tager højde for bygningens BBR-data og de aktuelle sensor målinger.
 """
-    
-    def _create_trend_analysis_prompt(self, readings: List[ClimateReading], stats: Dict, address: str) -> str:
-        """Create prompt for trend analysis."""
-        address_line = f"📍 Adresse: {address}\n\n" if address else ""
-        
-        # Create trend description
-        recent_temps = [r.temperature for r in readings[-5:]] if len(readings) >= 5 else [r.temperature for r in readings]
-        recent_humidity = [r.humidity for r in readings[-5:]] if len(readings) >= 5 else [r.humidity for r in readings]
-        
-        temp_trend = "stigende" if len(recent_temps) > 1 and recent_temps[-1] > recent_temps[0] else "faldende"
-        humidity_trend = "stigende" if len(recent_humidity) > 1 and recent_humidity[-1] > recent_humidity[0] else "faldende"
-        
-        return f"""
-Du er en intelligent klimatrendanalyst og beredskabsrådgiver.
-
-{address_line}📊 KLIMADATA OVERSIGT:
-• Antal målinger: {stats['count']}
-• Tidsperiode: {stats['time_range']['first']} til {stats['time_range']['last']}
-
-🌡️ TEMPERATUR:
-• Nuværende: {stats['temperature']['current']:.1f}°C
-• Min/Max: {stats['temperature']['min']:.1f}°C / {stats['temperature']['max']:.1f}°C  
-• Gennemsnit: {stats['temperature']['avg']:.1f}°C
-• Trend: {temp_trend}
-
-💧 LUFTFUGTIGHED:
-• Nuværende: {stats['humidity']['current']:.1f}%
-• Min/Max: {stats['humidity']['min']:.1f}% / {stats['humidity']['max']:.1f}%
-• Gennemsnit: {stats['humidity']['avg']:.1f}%
-• Trend: {humidity_trend}
-
-Baseret på disse trends og data, giv:
-1. Risikovurdering af de observerede mønstre
-2. Langsigtede anbefalinger baseret på trends
-3. Kritiske tærskler at holde øje med
-4. Forebyggende handlingsplan for næste 24-48 timer
-5. Sammenligning med normale danske klimaforhold
-"""
+        return prompt
     
     def _get_ai_response(self, prompt: str, analysis_type: str = "general") -> str:
         """Get response from OpenAI API and save to file."""
@@ -286,28 +206,34 @@ Baseret på disse trends og data, giv:
                 messages=[
                     {
                         "role": "system",
-                        "content": "Du er en ekspert i klimarisikovurdering og bygningsvedligeholdelse i Danmark. Giv konkrete, handlingsorienterede råd."
+                        "content": "Du er en ekspert i klimarisikovurdering og bygningsvedligeholdelse i Danmark. Giv konkrete, handlingsorienterede råd baseret på de fremlagte sensor- og BBR-data."
                     },
                     {
                         "role": "user",
                         "content": prompt
                     }
                 ],
-                max_tokens=700,
+                max_tokens=1000, # Øget max_tokens for potentielt længere prompts/svar
                 temperature=0.3
             )
             
             ai_response = response.choices[0].message.content
-            
-            # Save analysis to file
             self._save_analysis(prompt, ai_response, analysis_type)
-            
             return ai_response
             
         except Exception as e:
             error_msg = f"❌ Kunne ikke få AI-analyse. Fejl: {str(e)}"
-            self._save_analysis(prompt, error_msg, f"{analysis_type}_error")
-            return error_msg
+            # Gemmer stadig prompten selv ved fejl, for debugging
+            self_save_analysis_path = Path(self.analysis_dir) / datetime.now().strftime("%Y-%m-%d") / f"{datetime.now().strftime('%H-%M-%S')}_{analysis_type}_error_prompt.txt"
+            try:
+                self_save_analysis_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(self_save_analysis_path, 'w', encoding='utf-8') as f_err:
+                    f_err.write("Fejl under AI-kald.\nPROMPT:\n")
+                    f_err.write(prompt)
+            except Exception as save_e:
+                print(f"⚠️ Yderligere fejl ved forsøg på at gemme fejlet prompt: {save_e}")
+
+            return error_msg # Returnerer oprindelig fejlmeddelelse
     
     def _save_analysis(self, prompt: str, response: str, analysis_type: str) -> None:
         """Save AI analysis to structured files."""
@@ -316,11 +242,9 @@ Baseret på disse trends og data, giv:
             date_str = timestamp.strftime("%Y-%m-%d")
             time_str = timestamp.strftime("%H-%M-%S")
             
-            # Create daily analysis directory
             daily_dir = self.analysis_dir / date_str
             daily_dir.mkdir(exist_ok=True)
             
-            # Individual analysis file
             analysis_file = daily_dir / f"{time_str}_{analysis_type}.txt"
             
             with open(analysis_file, 'w', encoding='utf-8') as f:
@@ -329,28 +253,12 @@ Baseret på disse trends og data, giv:
                 f.write("="*60 + "\n")
                 f.write(f"Tidspunkt: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}\n")
                 f.write(f"Model: {self.model}\n")
-                f.write("\n" + "-"*60 + "\n")
-                f.write("PROMPT:\n")
-                f.write("-"*60 + "\n")
+                f.write("\n" + "-"*60 + "\nPROMPT:\n" + "-"*60 + "\n")
                 f.write(prompt + "\n")
-                f.write("\n" + "-"*60 + "\n")
-                f.write("AI RESPONS:\n")
-                f.write("-"*60 + "\n")
-                f.write(response + "\n")
-                f.write("\n" + "="*60 + "\n")
+                f.write("\n" + "-"*60 + "\nAI RESPONS:\n" + "-"*60 + "\n")
+                f.write(response + "\n\n" + "="*60 + "\n")
             
-            # Append to daily log file
-            daily_log = daily_dir / f"{date_str}_analyser.log"
-            
-            with open(daily_log, 'a', encoding='utf-8') as f:
-                f.write(f"\n[{timestamp.strftime('%H:%M:%S')}] {analysis_type.upper()}\n")
-                f.write("-" * 40 + "\n")
-                f.write(response + "\n")
-                f.write("=" * 40 + "\n")
-            
-            # Update latest analysis file
             latest_file = self.analysis_dir / "latest_analysis.txt"
-            
             with open(latest_file, 'w', encoding='utf-8') as f:
                 f.write(f"Seneste AI Analyse\n")
                 f.write(f"Tidspunkt: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}\n")
@@ -360,38 +268,6 @@ Baseret på disse trends og data, giv:
                 
         except Exception as e:
             print(f"⚠️  Kunne ikke gemme analyse: {e}")
-    
-    def get_analysis_history(self, days_back: int = 7) -> List[Dict]:
-        """Get history of recent analyses."""
-        analyses = []
-        
-        for i in range(days_back):
-            date = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
-            daily_dir = self.analysis_dir / date
-            
-            if daily_dir.exists():
-                for analysis_file in daily_dir.glob("*.txt"):
-                    if not analysis_file.name.endswith("_analyser.log"):
-                        try:
-                            with open(analysis_file, 'r', encoding='utf-8') as f:
-                                content = f.read()
-                            
-                            # Extract info from filename
-                            name_parts = analysis_file.stem.split('_', 1)
-                            time_str = name_parts[0]
-                            analysis_type = name_parts[1] if len(name_parts) > 1 else "unknown"
-                            
-                            analyses.append({
-                                "date": date,
-                                "time": time_str,
-                                "type": analysis_type,
-                                "file": str(analysis_file),
-                                "size": len(content)
-                            })
-                        except Exception:
-                            continue
-        
-        return sorted(analyses, key=lambda x: f"{x['date']} {x['time']}", reverse=True)
 
 
 class ClimateMonitorApp:
@@ -400,164 +276,87 @@ class ClimateMonitorApp:
     def __init__(self, data_dir: str = "sensordata"):
         self.data_reader = DataReader(data_dir)
         self.analyzer = ClimateAnalyzer(data_dir)
-    
-    def run_current_analysis(self, address: str = "") -> None:
-        """Analyze current climate conditions."""
-        print("🔍 Henter nuværende klimadata...")
-        
-        current = self.data_reader.get_current_reading()
-        if not current:
-            print("❌ Ingen aktuelle data tilgængelige")
-            return
-        
-        print(f"📈 Nuværende: {current.temperature:.1f}°C, {current.humidity:.1f}%")
-        print("🤖 AI analyserer nuværende forhold...")
-        
-        analysis = self.analyzer.analyze_current_conditions(current, address)
-        
-        print("\n" + "="*60)
-        print("📋 AKTUEL KLIMAANALYSE")
-        print("="*60)
-        print(analysis)
-    
-    def run_trend_analysis(self, address: str = "", days_back: int = 1) -> None:
-        """Analyze climate trends over time."""
-        print(f"📊 Henter klimadata for de sidste {days_back} dag(e)...")
-        
-        # Get data for analysis
-        all_readings = []
-        for i in range(days_back):
-            date = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
-            daily_readings = self.data_reader.get_daily_data(date)
-            all_readings.extend(daily_readings)
-        
-        if not all_readings:
-            print("❌ Ingen historiske data tilgængelige")
-            return
-        
-        # Get statistics
-        stats = self.data_reader.get_statistics(all_readings)
-        
-        print(f"📈 Analyserer {len(all_readings)} målinger...")
-        print(f"📊 Temperatur: {stats['temperature']['min']:.1f}-{stats['temperature']['max']:.1f}°C")
-        print(f"💧 Luftfugtighed: {stats['humidity']['min']:.1f}-{stats['humidity']['max']:.1f}%")
-        print("🤖 AI analyserer trends...")
-        
-        analysis = self.analyzer.analyze_trends(all_readings, stats, address)
-        
-        print("\n" + "="*60)
-        print("📊 KLIMATREND ANALYSE")
-        print("="*60)
-        print(analysis)
-    
-    def show_analysis_history(self) -> None:
-        """Show history of recent AI analyses."""
-        print("📚 ANALYSE HISTORIK")
-        print("="*50)
-        
-        analyses = self.analyzer.get_analysis_history(7)
-        
-        if not analyses:
-            print("❌ Ingen tidligere analyser fundet")
-            return
-        
-        print(f"📋 Seneste {len(analyses)} analyser:")
-        
-        for analysis in analyses[:10]:  # Show last 10
-            type_display = analysis['type'].replace('_', ' ').title()
-            print(f"  📅 {analysis['date']} {analysis['time']} - {type_display}")
-        
-        # Show latest analysis content
-        if analyses:
-            latest_file = Path(self.analyzer.analysis_dir) / "latest_analysis.txt"
-            if latest_file.exists():
-                print(f"\n📄 SENESTE ANALYSE:")
-                print("-" * 30)
-                try:
-                    with open(latest_file, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    print(content)
-                except Exception as e:
-                    print(f"❌ Kunne ikke læse seneste analyse: {e}")
-        
-        print(f"\n💾 Alle analyser gemmes i: {self.analyzer.analysis_dir}")
-        """Show summary of available data."""
-        print("📁 DATA OVERSIGT")
-        print("="*40)
-        
-        # Current reading
-        current = self.data_reader.get_current_reading()
-        if current:
-            print(f"🕐 Seneste måling: {current.timestamp}")
-            print(f"🌡️  {current.temperature:.1f}°C, 💧 {current.humidity:.1f}%")
+        self.bbr_service = None
+        if BBRAddressService:
+            try:
+                bbr_username = os.getenv('DATAFORDELER_NO_CERT_USERNAME')
+                bbr_password = os.getenv('DATAFORDELER_NO_CERT_PASSWORD')
+                if not bbr_username or not bbr_password:
+                    print("⚠️ ADVARSEL: BBR brugernavn/password ikke fundet i miljøvariabler.")
+                    print("   BBR-data vil ikke blive hentet. Angiv DATAFORDELER_NO_CERT_USERNAME og DATAFORDELER_NO_CERT_PASSWORD.")
+                else:
+                    self.bbr_service = BBRAddressService(username=bbr_username, password=bbr_password)
+            except Exception as e:
+                print(f"❌ Fejl ved initialisering af BBRAddressService: {e}")
+                self.bbr_service = None
         else:
-            print("❌ Ingen aktuelle data")
+            print("ℹ️ BBRAddressService ikke tilgængelig (importfejl). Fortsætter uden BBR-integration.")
+
+    def run_current_analysis(self, address: str = "") -> None:
+        """Analyze current climate conditions, including BBR data if available."""
+        print("🔍 Henter nuværende klimadata...")
+        current_sensor_reading = self.data_reader.get_current_reading()
         
-        # Latest readings
-        latest = self.data_reader.get_latest_readings(5)
-        if latest:
-            print(f"\n📋 Seneste {len(latest)} målinger:")
-            for reading in latest[-5:]:
-                print(f"  {reading.timestamp}: {reading.temperature:.1f}°C, {reading.humidity:.1f}%")
+        if not current_sensor_reading:
+            print("❌ Ingen aktuelle sensordata tilgængelige.")
+            return
+
+        print(f"📈 Nuværende sensordata: {current_sensor_reading.temperature:.1f}°C, {current_sensor_reading.humidity:.1f}%")
+
+        bbr_building_data: Optional[BuildingData] = None
+        if self.bbr_service and address:
+            print(f"🏘️ Henter BBR-data for adressen: {address}...")
+            bbr_building_data = self.bbr_service.get_building_data(address)
+            if bbr_building_data:
+                print("✅ BBR-data hentet succesfuldt.")
+                # print(bbr_building_data.get_summary()) # For debugging
+            else:
+                print("⚠️ Kunne ikke hente BBR-data for den angivne adresse.")
+        elif not address and self.bbr_service:
+            print("ℹ️ Ingen adresse angivet, BBR-data vil ikke blive hentet.")
+        elif not self.bbr_service:
+             print("ℹ️ BBR Service er ikke konfigureret, fortsætter uden BBR-data.")
+
+
+        print("🤖 AI analyserer nuværende forhold...")
+        analysis = self.analyzer.analyze_current_conditions(
+            current_sensor_reading, 
+            bbr_building_data, 
+            address or "Ukendt adresse" # Sørg for at adresse altid er en streng
+        )
         
-        # Daily files
-        daily_dir = self.data_reader.data_dir / "daily"
-        if daily_dir.exists():
-            csv_files = list(daily_dir.glob("*.csv"))
-            print(f"\n📅 Tilgængelige dage: {len(csv_files)}")
-            for file_path in sorted(csv_files)[-7:]:  # Last 7 days
-                try:
-                    line_count = sum(1 for _ in open(file_path)) - 1
-                    print(f"  {file_path.stem}: {line_count} målinger")
-                except Exception:
-                    print(f"  {file_path.stem}: fejl ved læsning")
+        print("\n" + "="*60)
+        print("📋 AKTUEL KLIMAANALYSE (med BBR-data hvis muligt)")
+        print("="*60)
+        print(analysis)
 
 
 def main():
     """Main application entry point."""
-    print("🌡️ KLIMAANALYSE SYSTEM")
+    print("🌡️  KLIMAANALYSE SYSTEM (Udvidet med BBR)")
     print("="*50)
     
     try:
-        # Initialize app
         data_dir = input("Data mappe (default: sensordata): ").strip() or "sensordata"
         app = ClimateMonitorApp(data_dir)
         
-        # Get address
-        address = input("📍 Indtast adresse (valgfri): ").strip()
+        address_input = input("📍 Indtast adresse for BBR-opslag (valgfri, tryk Enter for at springe over): ").strip()
         
         while True:
             print("\n🔧 VÆLG HANDLING:")
-            print("1. Analyser nuværende forhold")
-            print("2. Analyser trends (sidste dag)")
-            print("3. Analyser trends (flere dage)")
-            print("4. Vis data oversigt")
-            print("5. Vis analyse historik")
-            print("6. Afslut")
+            print("1. Analyser nuværende forhold (inkl. BBR-data hvis adresse er angivet)")
+            print("2. Afslut") 
             
-            choice = input("\nVælg (1-6): ").strip()
+            choice = input("\nVælg (1-2): ").strip()
             
             if choice == "1":
-                app.run_current_analysis(address)
+                # Hvis brugeren indtastede en ny adresse her, kunne man opdatere app.address
+                # For nu bruges den adresse, der blev indtastet ved start.
+                app.run_current_analysis(address_input)
                 
             elif choice == "2":
-                app.run_trend_analysis(address, days_back=1)
-                
-            elif choice == "3":
-                days = input("Antal dage tilbage (default: 3): ").strip()
-                days = int(days) if days.isdigit() else 3
-                app.run_trend_analysis(address, days_back=days)
-                
-            elif choice == "4":
-                app.show_data_summary()
-                
-            elif choice == "5":
-                app.show_analysis_history()
-                
-            elif choice == "6":
                 print("👋 Farvel!")
                 break
-                
             else:
                 print("❌ Ugyldigt valg")
             
@@ -567,6 +366,8 @@ def main():
         print("\n👋 Program stoppet af bruger")
     except Exception as e:
         print(f"❌ Programfejl: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
