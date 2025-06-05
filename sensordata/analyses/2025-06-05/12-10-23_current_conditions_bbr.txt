@@ -1,0 +1,55 @@
+============================================================
+KLIMAANALYSE - CURRENT_CONDITIONS_BBR
+============================================================
+Tidspunkt: 2025-06-05 12:10:23
+Model: gpt-4
+
+------------------------------------------------------------
+PROMPT:
+------------------------------------------------------------
+
+Du er en intelligent klimarisikovurderingsassistent.
+
+ADRESSE: Langebrogade 3, 1411 København K
+
+NUVÆRENDE SENSORMÅLINGER:
+🌡️ Temperatur (realtid): 23.5 °C
+💧 Luftfugtighed (realtid): 65.2 %
+⏰ Målt: 2025-06-03 14:30:00
+
+BYGNINGSINFORMATION FRA BBR:
+Bygningstype: Rækkehus
+Samlet boligareal: 1053 m²
+Samlet erhvervsareal: -1144 m²
+Elevator: Nej
+
+Baseret på BÅDE ovenstående SENSORMÅLINGER OG de detaljerede BYGNINGSOPLYSNINGER FRA BBR (hvis tilgængelige):
+1. Hvad er de typiske klimarisici for DENNE SPECIFIKKE BYGNING (med dens type, materialer, alder, og konstruktion som beskrevet i BBR) på adressen?
+2. Vurder bygningens sårbarhed over for fugt, skybrud og varme baseret på dens BBR-karakteristika (f.eks. kælder, tagmateriale, opførelsesår).
+3. Giv en KONKRET beredskabsplan TILPASSET DENNE SPECIFIKKE BYGNING.
+4. Anbefal konkrete handlinger – både forebyggende og ved kritisk hændelse – der tager højde for bygningens BBR-data og de aktuelle sensor målinger.
+
+
+------------------------------------------------------------
+AI RESPONS:
+------------------------------------------------------------
+1. Klimarisici for bygningen:
+   - Oversvømmelse: Da bygningen er beliggende i København, er der risiko for oversvømmelse ved kraftig regn eller stigning i havniveauet.
+   - Varme: Bygningen kan være udsat for overophedning under varmebølger, især hvis der ikke er tilstrækkelig ventilation eller skygge.
+   - Fugt: Med en relativ høj luftfugtighed kan der være risiko for fugtskader, især hvis bygningen ikke er tilstrækkeligt ventileret eller isoleret.
+
+2. Bygningens sårbarhed:
+   - Fugt: Høj luftfugtighed kan føre til fugtskader, især hvis ventilationen er utilstrækkelig. Det er vigtigt at sikre, at bygningen er korrekt ventileret og isoleret.
+   - Skybrud: Bygningen kan være sårbar over for skybrud, især hvis der ikke er tilstrækkelige dræn eller afløb.
+   - Varme: Hvis bygningen ikke er korrekt isoleret eller ventileret, kan den blive meget varm under en varmebølge.
+
+3. Beredskabsplan:
+   - Overvågning: Installer sensorer til at overvåge temperatur, luftfugtighed og vandniveauer, så du kan reagere hurtigt på ændringer.
+   - Forebyggelse: Installer skygge eller solfilm på vinduer for at reducere varme, og sørg for god ventilation for at reducere fugt. Installer også tilstrækkelige dræn og afløb for at håndtere skybrud.
+   - Beredskab: Hav en plan for, hvad du skal gøre i tilfælde af oversvømmelse, varmebølge eller fugtskader. Dette kan omfatte at have kontaktinformation til relevante fagfolk, og at vide, hvordan du lukker for vand og strøm, hvis det er nødvendigt.
+
+4. Konkrete handlinger:
+   - Forebyggende: Installer sensorer, skygge/solfilm, god ventilation og tilstrækkelige dræn/afløb. Overvej også at installere en varmepumpe eller aircondition for at håndtere varmebølger.
+   - Kritisk hændelse: Hvis der er oversvømmelse, luk for vand og strøm, og kontakt en fagperson. Hvis der er fugtskader, sørg for god ventilation, og kontakt en fagperson. Hvis der er en varmebølge, sørg for god ventilation, og brug varmepumpe eller aircondition.
+
+============================================================

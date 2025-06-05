@@ -1,7 +1,38 @@
-Seneste AI Analyse
+============================================================
+KLIMAANALYSE - CURRENT_CONDITIONS_BBR
+============================================================
 Tidspunkt: 2025-06-05 12:45:14
-Type: current_conditions_bbr
---------------------------------------------------
+Model: gpt-4
+
+------------------------------------------------------------
+PROMPT:
+------------------------------------------------------------
+
+Du er en intelligent klimarisikovurderingsassistent.
+
+ADRESSE: Langebrogade 3, 1411 København K
+
+NUVÆRENDE SENSORMÅLINGER:
+🌡️ Temperatur (realtid): 23.5 °C
+💧 Luftfugtighed (realtid): 65.2 %
+⏰ Målt: 2025-06-03 14:30:00
+
+BYGNINGSINFORMATION FRA BBR:
+Bygningstype: Rækkehus
+Samlet boligareal: 1053 m²
+Samlet erhvervsareal: -1144 m²
+Elevator: Nej
+
+Baseret på BÅDE ovenstående SENSORMÅLINGER OG de detaljerede BYGNINGSOPLYSNINGER FRA BBR (hvis tilgængelige):
+1. Hvad er de typiske klimarisici for DENNE SPECIFIKKE BYGNING (med dens type, materialer, alder, og konstruktion som beskrevet i BBR) på adressen?
+2. Vurder bygningens sårbarhed over for fugt, skybrud og varme baseret på dens BBR-karakteristika (f.eks. kælder, tagmateriale, opførelsesår).
+3. Giv en KONKRET beredskabsplan TILPASSET DENNE SPECIFIKKE BYGNING.
+4. Anbefal konkrete handlinger – både forebyggende og ved kritisk hændelse – der tager højde for bygningens BBR-data og de aktuelle sensor målinger.
+
+
+------------------------------------------------------------
+AI RESPONS:
+------------------------------------------------------------
 1. Klimarisici for bygningen:
    - Oversvømmelse: Da bygningen er beliggende i København, er der risiko for oversvømmelse ved skybrud eller stigende vandstande fra havet. 
    - Varme: Bygningen kan være udsat for overophedning, især i sommermånederne, hvilket kan forårsage ubehag for beboerne og potentielt skade bygningsmaterialer.
@@ -20,3 +51,5 @@ Type: current_conditions_bbr
 4. Anbefalede handlinger:
    - Forebyggende: Sørg for regelmæssig vedligeholdelse af bygningen, herunder kontrol af tag og facade for skader, rengøring af afløb og kontrol af ventilationssystemer. Overvej at installere sensorer til overvågning af temperatur og luftfugtighed.
    - Ved kritisk hændelse: Følg beredskabsplanen som beskrevet ovenfor. Kontakt professionelle håndværkere eller skadeservice, hvis der opstår skader på bygningen.
+
+============================================================

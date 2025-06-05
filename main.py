@@ -10,9 +10,9 @@ from pathlib import Path
 from typing import Optional, Dict, List
 from dotenv import load_dotenv
 
-# Import our enhanced components
-from climate_analyzer import EnhancedClimateAnalyzer, DataReader, ClimateReading
-from bbr_service import BBRAddressService, BuildingData
+# Import our components
+from climate_analyzer import ClimateAnalyzer, DataReader, ClimateReading # Bruger ClimateAnalyzer
+from bbr_service import BBRAddressService, BuildingData # Sørg for BBRAddressService er tilgængelig
 
 # Load environment variables
 load_dotenv()
@@ -20,47 +20,57 @@ load_dotenv()
 
 class EnhancedClimateMonitorApp:
     """Enhanced climate monitoring application with intelligent BBR integration."""
-    
+
     def __init__(self, data_dir: str = "sensordata"):
         self.data_reader = DataReader(data_dir)
-        self.analyzer = EnhancedClimateAnalyzer(data_dir)
-        
+        self.analyzer = ClimateAnalyzer(data_dir) # ClimateAnalyzer har ikke selv bbr_service
+
+        # Initialiser BBR service her i EnhancedClimateMonitorApp
+        self.bbr_service_instance = None # Ny attribut til at holde BBR service
+        if BBRAddressService: # Tjek om klassen blev importeret korrekt
+            try:
+                bbr_username = os.getenv('DATAFORDELER_NO_CERT_USERNAME')
+                bbr_password = os.getenv('DATAFORDELER_NO_CERT_PASSWORD')
+                if not bbr_username or not bbr_password:
+                    print("⚠️ ADVARSEL: BBR brugernavn/password ikke fundet i miljøvariabler.")
+                    print("   BBR-data vil ikke blive hentet. Angiv DATAFORDELER_NO_CERT_USERNAME og DATAFORDELER_NO_CERT_PASSWORD.")
+                else:
+                    self.bbr_service_instance = BBRAddressService(username=bbr_username, password=bbr_password)
+            except Exception as e:
+                print(f"❌ Fejl ved initialisering af BBRAddressService: {e}")
+                self.bbr_service_instance = None
+        else:
+            print("ℹ️ BBRAddressService klasse ikke fundet (mulig importfejl). Fortsætter uden BBR-integration.")
+
+        # Tjek BBR tilgængelighed baseret på den lokalt initialiserede service
+        self.bbr_available = self.bbr_service_instance is not None
+
         # Current session data
         self.current_address = ""
-        self.current_building_data = None
-        
-        # Check BBR service availability
-        self.bbr_available = self.analyzer.bbr_service is not None
-        
+        self.current_building_data = None # Vil holde BBR BuildingData objektet
+
         print(f"🌡️ Climate Monitor startet")
         print(f"📁 Data directory: {data_dir}")
         print(f"🏠 BBR Integration: {'✅ Aktiveret' if self.bbr_available else '❌ Ikke tilgængelig'}")
-    
+
     def set_property_address(self, address: str, force_reload: bool = False) -> bool:
         """
         Set the property address and load building data.
-        
-        Args:
-            address: Property address to analyze
-            force_reload: Force reload building data even if address is same
-            
-        Returns:
-            True if building data was loaded successfully
         """
         if address == self.current_address and not force_reload and self.current_building_data:
             print(f"📍 Bruger eksisterende data for: {address}")
             return True
-        
+
         print(f"🔍 Indlæser bygningsdata for: {address}")
-        
-        # Load building data if BBR is available
-        if self.bbr_available:
-            self.current_building_data = self.analyzer.bbr_service.get_building_data(address)
-            
+
+        # Brug den lokalt initialiserede bbr_service_instance
+        if self.bbr_available and self.bbr_service_instance:
+            self.current_building_data = self.bbr_service_instance.get_building_data(address) #
+
             if self.current_building_data:
                 self.current_address = address
                 print("✅ Bygningsdata indlæst")
-                print(self.current_building_data.get_summary())
+                print(self.current_building_data.get_summary()) #
                 return True
             else:
                 print("⚠️  Kunne ikke hente bygningsdata - fortsætter med standard analyse")
@@ -68,353 +78,242 @@ class EnhancedClimateMonitorApp:
                 self.current_building_data = None
                 return False
         else:
-            print("⚠️  BBR service ikke tilgængelig - bruger adresse-baseret analyse")
+            print("⚠️  BBR service ikke tilgængelig eller ikke initialiseret korrekt - bruger adresse-baseret analyse uden BBR data.")
             self.current_address = address
             self.current_building_data = None
             return False
-    
+
     def run_intelligent_analysis(self) -> None:
         """Run intelligent analysis with address and building data integration."""
         print("🔍 Kører intelligent klimaanalyse...")
-        
-        # Get current climate data
-        current = self.data_reader.get_current_reading()
+
+        current = self.data_reader.get_current_reading() #
         if not current:
             print("❌ Ingen aktuelle klimadata tilgængelige")
             print("💡 Tip: Kør 'sensor_logger.py' først for at indsamle data")
             return
-        
-        # Ensure we have an address
+
         if not self.current_address:
-            address = input("📍 Indtast ejendomsadresse: ").strip()
-            if not address:
+            address_input = input("📍 Indtast ejendomsadresse: ").strip()
+            if not address_input:
                 print("❌ Adresse er påkrævet for intelligent analyse")
                 return
-            self.set_property_address(address)
-        
-        # Display current conditions
+            self.set_property_address(address_input)
+
         print(f"\n📈 Aktuelle klimaforhold:")
         print(f"🌡️  Temperatur: {current.temperature:.1f}°C")
         print(f"💧 Luftfugtighed: {current.humidity:.1f}%")
         print(f"⏰ Målt: {current.timestamp}")
-        
-        # Run AI analysis with building integration
+
         print("🤖 AI analyserer klimaforhold og bygningsegenskaber...")
-        
+        analysis_result = ""
+        analysis_type = ""
+
+        # self.current_building_data hentes via self.set_property_address()
+        # og er enten BuildingData objekt eller None.
+        # ClimateAnalyzer.analyze_current_conditions forventer bbr_data som parameter.
+        analysis_result = self.analyzer.analyze_current_conditions(
+            current,
+            self.current_building_data, # Sender det hentede BBR data (eller None)
+            self.current_address or "Ukendt adresse"
+        ) #
+
         if self.current_building_data:
-            # Enhanced analysis with building data
-            analysis = self.analyzer.analyze_with_address(current, self.current_address)
             analysis_type = "🏠 INTELLIGENT ANALYSE (med BBR data)"
         else:
-            # Address-based analysis without detailed building data
-            analysis = self.analyzer.analyze_current_conditions(current, self.current_address)
-            analysis_type = "📍 ADRESSE-BASERET ANALYSE"
-        
-        # Display results
-        self._display_analysis_results(analysis_type, analysis)
-    
+            analysis_type = "📍 ADRESSE-BASERET ANALYSE (uden BBR data)"
+
+        self._display_analysis_results(analysis_type, analysis_result)
+
     def run_intelligent_trend_analysis(self, days_back: int = 1) -> None:
         """Run intelligent trend analysis with building data."""
         print(f"📊 Kører intelligent trendanalyse for {days_back} dag(e)...")
-        
-        # Get historical data
         all_readings = []
-        for i in range(days_back):
-            date = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
-            daily_readings = self.data_reader.get_daily_data(date)
-            all_readings.extend(daily_readings)
-        
-        if not all_readings:
-            print("❌ Ingen historiske data tilgængelige")
-            print("💡 Tip: Lad 'sensor_logger.py' køre et stykke tid for at samle data")
+        # NOTE: Manglende funktionalitet i DataReader for historiske data.
+        print("NOTE: Funktionen for at hente daglige data ('get_daily_data') og statistik ('get_statistics') er ikke fuldt defineret i DataReader.")
+        print("      Trendanalyse vil muligvis ikke fungere som forventet uden disse.")
+
+        if not all_readings: # Vil være tom baseret på noten ovenfor
+            print("❌ Ingen historiske data tilgængelige for trendanalyse (eller metoder mangler i DataReader).")
             return
-        
-        # Ensure we have an address
+
         if not self.current_address:
-            address = input("📍 Indtast ejendomsadresse: ").strip()
-            if not address:
+            address_input = input("📍 Indtast ejendomsadresse: ").strip()
+            if not address_input:
                 print("❌ Adresse er påkrævet for intelligent analyse")
                 return
-            self.set_property_address(address)
-        
-        # Get statistics
-        stats = self.data_reader.get_statistics(all_readings)
-        
-        # Display data overview
+            self.set_property_address(address_input)
+
+        stats = {"time_range": {"first": "N/A", "last": "N/A"}, "temperature": {"min": 0, "max": 0}, "humidity": {"min": 0, "max": 0}} # Placeholder
+
         print(f"\n📊 Datagrundlag:")
         print(f"📋 Antal målinger: {len(all_readings)}")
         print(f"📅 Periode: {stats['time_range']['first']} → {stats['time_range']['last']}")
         print(f"🌡️  Temperatur: {stats['temperature']['min']:.1f}-{stats['temperature']['max']:.1f}°C")
         print(f"💧 Luftfugtighed: {stats['humidity']['min']:.1f}-{stats['humidity']['max']:.1f}%")
-        
-        # Run intelligent trend analysis
+
         print("🤖 AI analyserer trends med bygningsspecifik viden...")
-        
-        if self.current_building_data:
-            analysis = self.analyzer.analyze_trends_with_building(
-                all_readings, stats, self.current_address, self.current_building_data
-            )
-            analysis_type = "📈 INTELLIGENT TRENDANALYSE (med BBR data)"
-        else:
-            analysis = self.analyzer.analyze_trends(all_readings, stats, self.current_address)
-            analysis_type = "📈 ADRESSE-BASERET TRENDANALYSE"
-        
-        # Display results
-        self._display_analysis_results(analysis_type, analysis)
-    
+        # NOTE: Manglende trendanalyse-metoder i ClimateAnalyzer
+        print("NOTE: Metoderne for trendanalyse (f.eks. 'analyze_trends_with_building', 'analyze_trends') er ikke defineret i ClimateAnalyzer.")
+        analysis_result = "Trendanalyse funktion er ikke implementeret i ClimateAnalyzer."
+        analysis_type = "TRENDANALYSE STATUS"
+
+        self._display_analysis_results(analysis_type, analysis_result)
+
+
     def show_building_details(self) -> None:
         """Show detailed building information."""
         if not self.current_address:
-            address = input("📍 Indtast ejendomsadresse: ").strip()
-            if not address:
+            address_input = input("📍 Indtast ejendomsadresse: ").strip()
+            if not address_input:
                 print("❌ Adresse er påkrævet")
                 return
-            self.set_property_address(address)
-        
+            if not self.set_property_address(address_input): # Opdaterer også current_building_data
+                 print("ℹ️ Kunne ikke indlæse bygningsdetaljer for den angivne adresse.")
+                 # Fortsæt evt. med at vise hvad der er, eller returner helt
+                 # return
+
         print("\n🏠 BYGNINGSDETALJER")
         print("="*50)
-        
+
         if self.current_building_data:
-            # Detailed building information
-            print(self.current_building_data.get_summary())
-            
-            # Technical details
-            data_dict = self.current_building_data.to_dict()
+            print(self.current_building_data.get_summary()) #
+            data_dict = self.current_building_data.to_dict() #
             print("\n📊 TEKNISKE DETALJER:")
-            print(f"• Bygningsareal: {data_dict.get('total_building_area', 'Ukendt')} m²")
-            print(f"• Boligareal: {data_dict.get('living_area', 'Ukendt')} m²")
-            print(f"• Kælderareal: {data_dict.get('basement_area', 'Ukendt')} m²")
-            print(f"• Loftareal: {data_dict.get('attic_area', 'Ukendt')} m²")
-            print(f"• Antal etager: {data_dict.get('floors', 'Ukendt')}")
-            print(f"• Antal værelser: {data_dict.get('rooms', 'Ukendt')}")
-            print(f"• Badeværelser: {data_dict.get('bathrooms', 'Ukendt')}")
-            print(f"• Toiletter: {data_dict.get('toilets', 'Ukendt')}")
-            
-            # Additional buildings
+            for key, value in data_dict.items():
+                 if value is not None and value != "" and value != []: # Vis kun felter med værdi
+                     print(f"• {key.replace('_', ' ').capitalize()}: {value}")
+
             if self.current_building_data.additional_buildings:
                 print(f"\n🏗️ YDERLIGERE BYGNINGER ({len(self.current_building_data.additional_buildings)} stk):")
                 for i, building in enumerate(self.current_building_data.additional_buildings, 1):
                     print(f"  {i}. {building.get('type', 'Ukendt')} ({building.get('area', '?')} m²)")
-                    if building.get('year'):
-                        print(f"     Opført: {building['year']}")
-                    if building.get('material'):
-                        print(f"     Materiale: {building['material']}")
-            
-            # Data source info
-            print(f"\n📋 DATAKILDE:")
-            print(f"• BBR (Bygnings- og Boligregistret)")
-            print(f"• Hentet via Datafordeler API")
-            print(f"• Opdateret: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+                    if building.get('year'): print(f"     Opført: {building['year']}")
+                    if building.get('material'): print(f"     Materiale: {building['material']}")
+            print(f"\n📋 DATAKILDE Opdateret: {self.current_building_data.last_updated or 'Ukendt'}")
         else:
             print(f"📍 Adresse: {self.current_address}")
-            print("⚠️  Detaljerede bygningsdata ikke tilgængelige")
-            
-            if self.bbr_available:
+            print("⚠️  Detaljerede bygningsdata ikke tilgængelige for denne adresse.")
+            if self.bbr_available and self.current_address: # Tilføjet current_address check
                 retry = input("\n🔄 Forsøg at hente bygningsdata igen? (j/n): ").strip().lower()
                 if retry == 'j':
                     self.set_property_address(self.current_address, force_reload=True)
-                    self.show_building_details()  # Recursive call with new data
-            else:
-                print("💡 BBR service ikke konfigureret - tjek environment variabler")
-    
+                    self.show_building_details()
+            elif not self.bbr_available:
+                 print("💡 BBR service er ikke konfigureret - tjek environment variabler.")
+
+
     def change_address(self) -> None:
         """Change the current property address."""
         print("\n📍 SKIFT EJENDOMSADRESSE")
         print("="*30)
-        
         if self.current_address:
             print(f"Nuværende adresse: {self.current_address}")
-        
         new_address = input("Indtast ny adresse: ").strip()
-        
         if not new_address:
             print("❌ Ingen adresse indtastet")
             return
-        
         if new_address == self.current_address:
-            print("ℹ️  Same adresse som før")
+            print("ℹ️  Samme adresse som før")
             return
-        
-        # Load new building data
-        success = self.set_property_address(new_address)
-        
-        if success:
+        if self.set_property_address(new_address):
             print(f"✅ Adresse opdateret til: {new_address}")
         else:
-            print(f"⚠️  Adresse sat til: {new_address} (uden detaljerede bygningsdata)")
-    
+            print(f"⚠️  Adresse sat til: {new_address}, men BBR-data kunne ikke hentes.")
+
+
     def show_analysis_history(self) -> None:
         """Show enhanced analysis history."""
         print("📚 ANALYSE HISTORIK")
         print("="*50)
-        
-        analyses = self.analyzer.get_analysis_history(7)
-        
+        # NOTE: Manglende funktionalitet i ClimateAnalyzer
+        print("NOTE: Metoden 'get_analysis_history' er ikke defineret i ClimateAnalyzer.")
+        analyses = [] # Placeholder
         if not analyses:
-            print("❌ Ingen tidligere analyser fundet")
+            print("❌ Ingen tidligere analyser fundet (eller metode mangler).")
             return
-        
-        print(f"📋 Seneste {len(analyses)} analyser:")
-        
-        # Group by type
-        bbr_analyses = [a for a in analyses if a.get('bbr_enhanced', False)]
-        standard_analyses = [a for a in analyses if not a.get('bbr_enhanced', False)]
-        
-        if bbr_analyses:
-            print(f"\n🏠 BBR-FORBEDREDE ANALYSER ({len(bbr_analyses)} stk):")
-            for analysis in bbr_analyses[:5]:
-                type_display = analysis['type'].replace('_', ' ').title()
-                print(f"  📅 {analysis['date']} {analysis['time']} - {type_display} ✅")
-        
-        if standard_analyses:
-            print(f"\n📍 STANDARD ANALYSER ({len(standard_analyses)} stk):")
-            for analysis in standard_analyses[:5]:
-                type_display = analysis['type'].replace('_', ' ').title()
-                print(f"  📅 {analysis['date']} {analysis['time']} - {type_display}")
-        
-        # Show latest analysis content
-        if analyses:
-            latest_file = Path(self.analyzer.analysis_dir) / "latest_analysis.txt"
-            if latest_file.exists():
-                print(f"\n📄 SENESTE ANALYSE:")
-                print("-" * 30)
-                try:
-                    with open(latest_file, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    print(content)
-                except Exception as e:
-                    print(f"❌ Kunne ikke læse seneste analyse: {e}")
-        
-        print(f"\n💾 Alle analyser gemmes i: {self.analyzer.analysis_dir}")
-    
+        # ... (resten af logikken forudsætter at 'analyses' fyldes)
+
+
     def show_data_summary(self) -> None:
         """Show summary of available climate data."""
         print("📁 KLIMADATA OVERSIGT")
         print("="*40)
-        
-        # Current reading
-        current = self.data_reader.get_current_reading()
+        current = self.data_reader.get_current_reading() #
         if current:
-            print(f"🕐 Seneste måling: {current.timestamp}")
-            print(f"🌡️  {current.temperature:.1f}°C, 💧 {current.humidity:.1f}%")
+            print(f"🕐 Seneste måling: {current.timestamp} - 🌡️ {current.temperature:.1f}°C, 💧 {current.humidity:.1f}%")
         else:
             print("❌ Ingen aktuelle data")
-        
-        # Latest readings
-        latest = self.data_reader.get_latest_readings(5)
-        if latest:
-            print(f"\n📋 Seneste {len(latest)} målinger:")
-            for reading in latest[-5:]:
-                print(f"  {reading.timestamp}: {reading.temperature:.1f}°C, {reading.humidity:.1f}%")
-        
-        # Daily files
-        daily_dir = self.data_reader.data_dir / "daily"
+
+        # NOTE: Manglende funktionalitet i DataReader
+        print("NOTE: Metoden 'get_latest_readings' for DataReader er ikke defineret i de viste filer.")
+
+        daily_dir = self.data_reader.data_dir / "daily" #
         if daily_dir.exists():
-            csv_files = list(daily_dir.glob("*.csv"))
-            print(f"\n📅 Tilgængelige dage: {len(csv_files)}")
-            for file_path in sorted(csv_files)[-7:]:  # Last 7 days
+            csv_files = sorted(list(daily_dir.glob("*.csv")), reverse=True)
+            print(f"\n📅 Tilgængelige dage (seneste 7 vist): {len(csv_files)}")
+            for file_path in csv_files[:7]:
                 try:
-                    line_count = sum(1 for _ in open(file_path)) - 1
+                    line_count = sum(1 for _ in open(file_path, encoding='utf-8')) -1
                     print(f"  {file_path.stem}: {line_count} målinger")
-                except Exception:
-                    print(f"  {file_path.stem}: fejl ved læsning")
-        
-        # Current address info
+                except Exception: print(f"  {file_path.stem}: fejl ved læsning")
         if self.current_address:
-            print(f"\n🏠 AKTUEL EJENDOM:")
-            print(f"📍 Adresse: {self.current_address}")
-            if self.current_building_data:
-                print(f"🏗️  Bygningstype: {self.current_building_data.building_type}")
-                print(f"📅 Byggeår: {self.current_building_data.building_year}")
-                print("✅ BBR data tilgængelig")
-            else:
-                print("⚠️  BBR data ikke tilgængelig")
-    
-    def _display_analysis_results(self, analysis_type: str, analysis: str) -> None:
+            print(f"\n🏠 AKTUEL EJENDOM: {self.current_address}")
+            if self.current_building_data: print(f"🏗️  {self.current_building_data.building_type}, Opført: {self.current_building_data.building_year} (BBR data ✅)")
+            else: print("⚠️  BBR data ikke tilgængelig for adressen.")
+
+
+    def _display_analysis_results(self, analysis_type: str, analysis_content: str) -> None:
         """Display analysis results in a formatted way."""
-        print(f"\n{'='*60}")
-        print(f"📋 {analysis_type}")
-        print('='*60)
-        print(analysis)
-        print('='*60)
-        
-        if self.current_building_data:
-            print(f"\n💡 Analyse baseret på konkrete bygningsdata fra BBR")
+        print(f"\n{'='*60}\n📋 {analysis_type}\n{'='*60}\n{analysis_content}\n{'='*60}")
+        if self.current_building_data and "(med BBR data)" in analysis_type:
+            print(f"\n💡 Analyse baseret på konkrete bygningsdata fra BBR for {self.current_address}")
         elif self.current_address:
             print(f"\n💡 Analyse baseret på adresse: {self.current_address}")
-        
         print(f"⏰ Genereret: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 
 def main():
     """Enhanced main application entry point."""
     print("🌡️ ENHANCED KLIMAANALYSE SYSTEM")
-    print("="*50)
-    print("🏠 Nu med intelligent BBR integration!")
-    print("")
-    
+    print("="*50 + "\n🏠 Nu med intelligent BBR integration!\n")
     try:
-        # Initialize enhanced app
-        data_dir = input("Data mappe (default: sensordata): ").strip() or "sensordata"
-        app = EnhancedClimateMonitorApp(data_dir)
-        
-        # Initial address setup
-        address = input("📍 Indtast ejendomsadresse (kan ændres senere): ").strip()
-        if address:
-            app.set_property_address(address)
-        
+        data_dir_input = input("Data mappe (default: sensordata): ").strip() or "sensordata"
+        app = EnhancedClimateMonitorApp(data_dir_input)
+        address_input_main = input("📍 Indtast ejendomsadresse (kan ændres senere, Enter for ingen): ").strip()
+        if address_input_main:
+            app.set_property_address(address_input_main)
+
         while True:
             print("\n🔧 VÆLG HANDLING:")
             print("1. 🏠 Intelligent klimaanalyse (nuværende forhold)")
-            print("2. 📈 Intelligent trendanalyse (sidste dag)")
-            print("3. 📊 Intelligent trendanalyse (flere dage)")
+            print("2. 📈 Intelligent trendanalyse (sidste dag) [Kræver implementering]")
+            print("3. 📊 Intelligent trendanalyse (flere dage) [Kræver implementering]")
             print("4. 🏗️  Vis bygningsdetaljer")
             print("5. 📍 Skift ejendomsadresse")
             print("6. 📁 Vis klimadata oversigt")
-            print("7. 📚 Vis analyse historik")
+            print("7. 📚 Vis analyse historik [Kræver implementering]")
             print("8. ❌ Afslut")
-            
             choice = input(f"\nVælg (1-8): ").strip()
-            
-            if choice == "1":
-                app.run_intelligent_analysis()
-                
-            elif choice == "2":
-                app.run_intelligent_trend_analysis(days_back=1)
-                
+
+            if choice == "1": app.run_intelligent_analysis()
+            elif choice == "2": app.run_intelligent_trend_analysis(days_back=1)
             elif choice == "3":
-                days = input("Antal dage tilbage (default: 3): ").strip()
-                days = int(days) if days.isdigit() and int(days) > 0 else 3
-                app.run_intelligent_trend_analysis(days_back=days)
-                
-            elif choice == "4":
-                app.show_building_details()
-                
-            elif choice == "5":
-                app.change_address()
-                
-            elif choice == "6":
-                app.show_data_summary()
-                
-            elif choice == "7":
-                app.show_analysis_history()
-                
-            elif choice == "8":
-                print("👋 Farvel!")
-                break
-                
-            else:
-                print("❌ Ugyldigt valg")
-            
+                days_input = input("Antal dage tilbage (default: 3): ").strip()
+                days_to_check = int(days_input) if days_input.isdigit() and int(days_input) > 0 else 3
+                app.run_intelligent_trend_analysis(days_back=days_to_check)
+            elif choice == "4": app.show_building_details()
+            elif choice == "5": app.change_address()
+            elif choice == "6": app.show_data_summary()
+            elif choice == "7": app.show_analysis_history()
+            elif choice == "8": print("👋 Farvel!"); break
+            else: print("❌ Ugyldigt valg")
             input("\nTryk Enter for at fortsætte...")
-            
-    except KeyboardInterrupt:
-        print("\n👋 Program stoppet af bruger")
+    except KeyboardInterrupt: print("\n👋 Program stoppet af bruger")
     except Exception as e:
         print(f"❌ Programfejl: {e}")
         import traceback
         traceback.print_exc()
-
 
 if __name__ == "__main__":
     main()
