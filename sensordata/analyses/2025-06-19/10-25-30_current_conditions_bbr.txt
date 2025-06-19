@@ -1,7 +1,48 @@
-Seneste AI Analyse
+============================================================
+KLIMAANALYSE - CURRENT_CONDITIONS_BBR
+============================================================
 Tidspunkt: 2025-06-19 10:25:30
-Type: current_conditions_bbr
---------------------------------------------------
+Model: gpt-4
+
+------------------------------------------------------------
+PROMPT:
+------------------------------------------------------------
+
+Du er en intelligent klimarisikovurderingsassistent.
+
+ADRESSE: Bagervej 1, 4200 Slagelse
+
+NUVÆRENDE SENSORMÅLINGER:
+🌡️ Temperatur (realtid): 23.5 °C
+💧 Luftfugtighed (realtid): 65.2 %
+⏰ Målt: 2025-06-03 14:30:00
+
+BYGNINGSINFORMATION FRA BBR:
+Bygningsnummer (hovedbygning): 4
+Bygningstype (hovedbygning): Udhus
+Opførelsesår (hovedbygning): 1960
+Renoveret år (hovedbygning): 2023
+Ydervægsmateriale (hovedbygning): Letbeton
+Tagdækningsmateriale (hovedbygning): Træ
+Bebygget areal (hovedbygning): 17 m²
+Elevator (hovedbygning): Nej
+
+YDERLIGERE BYGNINGER PÅ GRUNDEN:
+  Bygning 1: Nr: 3, Type: Anden bygning til landbrug, Opført: 1960, Materiale: Tagpap
+  Bygning 2: Nr: 1, Type: Fritliggende enfamiliehus, Areal: 88 m², Opført: 1820, Materiale: Mursten
+  Bygning 3: Nr: 2, Type: Drivhus, Opført: 1941, Materiale: Beton
+
+
+Baseret på BÅDE ovenstående SENSORMÅLINGER OG de detaljerede BYGNINGSOPLYSNINGER FRA BBR (hvis tilgængelige):
+1. Hvad er de typiske klimarisici for DENNE SPECIFIKKE BYGNING (med dens type, materialer, alder, og konstruktion som beskrevet i BBR) på adressen?
+2. Vurder bygningens sårbarhed over for fugt, skybrud og varme baseret på dens BBR-karakteristika (f.eks. kælder, tagmateriale, opførelsesår).
+3. Giv en KONKRET beredskabsplan TILPASSET DENNE SPECIFIKKE BYGNING.
+4. Anbefal konkrete handlinger – både forebyggende og ved kritisk hændelse – der tager højde for bygningens BBR-data og de aktuelle sensor målinger.
+
+
+------------------------------------------------------------
+AI RESPONS:
+------------------------------------------------------------
 1. Klimarisici for denne specifikke bygning:
    - Hovedbygningen er et udhus opført i 1960 og renoveret i 2023. Den er bygget i letbeton med et trætag. Denne type bygning kan være sårbar over for fugtproblemer, især hvis trætaget ikke er blevet vedligeholdt korrekt. 
    - De andre bygninger på grunden inkluderer et landbrugshus med tagpap, et fritliggende enfamiliehus af mursten, og et drivhus af beton. Disse bygninger kan også være udsat for klimarelaterede risici, især hvis de ikke er blevet vedligeholdt korrekt. 
@@ -20,3 +61,5 @@ Type: current_conditions_bbr
 4. Anbefalede handlinger:
    - Forebyggende: Kontroller regelmæssigt bygningernes tilstand, især tagene. Sørg for god ventilation og opgrader dræningssystemerne om nødvendigt. Overvej at installere klimaanlæg eller andre kølesystemer.
    - Ved kritisk hændelse: Hvis der er tegn på fugt eller skimmel, skal du tage skridt til at løse problemet så hurtigt som muligt, f.eks. ved at forbedre ventilationen eller reparere eventuelle lækager. Hvis der er oversvømmelse, skal du tage skridt til at tømme vandet og minimere skaderne. Hvis der er overophedning, skal du sørge for at køle bygningerne ned.
+
+============================================================
