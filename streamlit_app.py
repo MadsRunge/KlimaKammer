@@ -526,7 +526,7 @@ def main():
         baudrate = st.selectbox("Baudrate", [9600, 19200, 38400, 57600, 115200], index=4)
         
         # Logging interval
-        interval = st.slider("Logging interval (sekunder)", min_value=10, max_value=300, value=60, step=10)
+        interval = st.slider("Logging interval (sekunder)", min_value=1, max_value=60, value=30, step=1)
         
         # Logging control buttons
         col1, col2 = st.columns(2)
